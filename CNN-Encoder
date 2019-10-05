@@ -1,0 +1,82 @@
+# 定义卷积自编码器进行去噪
+class ConvEncoder:
+    def __init__(self):
+        self.x = tf.placeholder(tf.float32, shape = [None, 28, 28, 1])
+
+    def cae(self):
+        # Encoder
+        x1 = tf.layers.conv2d(self.x,
+                              filters = 32,
+                              kernel_size = (3, 3),
+                              strides=(1, 1),
+                              padding='same',
+                              activation=tf.nn.relu)
+        x1 = tf.layers.max_pooling2d(x1,
+                                     pool_size=(2, 2),
+                                     strides = (2, 2),
+                                     padding='same')
+        x2 = tf.layers.conv2d(x1,
+                              filters = 16,
+                              kernel_size = (3, 3),
+                              strides=(1, 1),
+                              padding='same',
+                              activation=tf.nn.relu)
+        x2 = tf.layers.max_pooling2d(x2,
+                                     pool_size = (2, 2),
+                                     strides = (2, 2),
+                                     padding='same')
+        # Decoder
+        x3 = tf.image.resize_nearest_neighbor(x2,
+                                              size = (x1.get_shape().as_list()[1],
+                                                      x1.get_shape().as_list()[2]))
+        x3 = tf.layers.conv2d_transpose(x3,
+                                        filters = 16,
+                                        kernel_size = (3, 3),
+                                        strides = (1, 1),
+                                        padding='same',
+                                        activation=tf.nn.relu)
+        x4 = tf.image.resize_nearest_neighbor(x3,
+                                              size=(self.x.get_shape().as_list()[1],
+                                                    self.x.get_shape().as_list()[2]))
+        x4 =  tf.layers.conv2d_transpose(x4,
+                                        filters = 32,
+                                        kernel_size = (3, 3),
+                                        strides = (1, 1),
+                                        padding='same',
+                                        activation=tf.nn.relu)
+        logits = tf.layers.conv2d(x4,
+                                  filters=1,
+                                  kernel_size=(3, 3),
+                                  strides=(1, 1),
+                                  padding='same',
+                                  activation=None)
+        self.decoder_out = tf.nn.sigmoid(logits)
+        # loss
+        self.loss = tf.reduce_mean(tf.pow(self.decoder_out-self.x, 2))
+        # optimizer
+        self.train_op = tf.train.AdamOptimizer(0.001).minimize(self.loss)
+
+    def iteration_train(self, xtest, batch_size = 128, epochs = 1):
+        self.cae()
+        mnist = read_mnist()
+        xtrain = mnist.train.images
+        init = tf.global_variables_initializer()
+        with tf.Session() as sess:
+            sess.run(init)
+            obj = []
+            steps = len(xtrain)//batch_size
+            for _ in range(epochs):
+                for i in range(steps):
+                    batch = xtrain[i*batch_size:(i+1)*batch_size]
+                    batch = np.reshape(batch, newshape=[batch.shape[0], 28, 28, 1])
+                    _, batch_loss = sess.run([self.train_op, self.loss],
+                                                  feed_dict = {self.x:batch})
+                    print('************The batch is %d***************'%i)
+                    print("The batch loss is: ",batch_loss)
+                    obj.append(batch_loss)
+                    if len(obj)>2 and obj[-2]-obj[-1]<1e-5:
+                        break
+                if len(obj) > 2 and obj[-2] - obj[-1] < 1e-5:
+                    break
+            reconstruct_x = sess.run([self.decoder_out], feed_dict={self.x:xtest})
+        return reconstruct_x
