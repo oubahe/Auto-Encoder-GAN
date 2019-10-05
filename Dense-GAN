@@ -160,14 +160,13 @@ with tf.Session() as sess:
             samples = sess.run(g_outputs, feed_dict={z:np.random.uniform(0, 1.0, [128, 100])})
             samples = np.reshape(samples, newshape=[samples.shape[0], 28, 28, 1])
             # 载入自编码器去噪
-            # reconstruct_samples = ConvEncoder().iteration_train(xtest=samples,
-            #                                                     batch_size=128,
-            #                                                     epochs=1)[0]
-            # reconstruct_samples = np.reshape(reconstruct_samples, newshape=[reconstruct_samples.shape[0], 784])
-            # fig = plot(reconstruct_samples)
+            reconstruct_samples = ConvEncoder().iteration_train(xtest=samples,
+                                                                batch_size=128,
+                                                                epochs=1)[0]
+            reconstruct_samples = np.reshape(reconstruct_samples, newshape=[reconstruct_samples.shape[0], 784])
             plt.ion()
             for i in range(9):
                 plt.subplot(3, 3, i+1)
-                plt.imshow(samples[i].reshape((28, 28)))
+                plt.imshow(reconstruct_samples[i].reshape((28, 28)))
             plt.pause(5)
             plt.close('all')
