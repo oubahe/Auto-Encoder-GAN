@@ -1,0 +1,2 @@
+# Auto-Encoder-GAN
+Generator通过噪声输入生成假图片，Discriminator通过学习训练图像集来判断假图片的真假，两者对抗训练，最终训练完成Generator生成的图片通过AutoEncoder去噪生成新的图像样本
